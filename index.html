@@ -32,7 +32,6 @@
   --font-body:'Atkinson Hyperlegible',sans-serif;
   --font-disp:'Sora',sans-serif;
   --font-mono:'JetBrains Mono',monospace;
-  --glass:backdrop-filter:blur(18px) saturate(1.15);-webkit-backdrop-filter:blur(18px) saturate(1.15);
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -81,7 +80,6 @@ main{flex:1;min-width:0}
   width:76px;flex-shrink:0;background:var(--bg0);
   display:flex;flex-direction:column;align-items:center;gap:8px;
   padding:14px 0 16px;position:sticky;top:0;height:100vh;z-index:50;
-  var(--glass);
   backdrop-filter:blur(18px) saturate(1.15);-webkit-backdrop-filter:blur(18px) saturate(1.15);
   border-right:1px solid var(--line-soft);
 }
@@ -558,7 +556,6 @@ footer .foot-cvv:hover{color:var(--sage)}
     </div>
     <div class="rail-sep"></div>
     <div class="rail-bottom">
-      <button class="rail-item" id="wallToggle" data-tip="Pausar papel de parede"><span class="pill"></span><span class="rail-btn"><i data-lucide="pause"></i></span></button>
       <a class="rail-item crisis" href="tel:188" data-tip="CVV 188 — ligar agora (24h)"><span class="pill"></span><span class="rail-btn"><i data-lucide="life-buoy"></i></span></a>
     </div>
   </nav>
@@ -853,22 +850,6 @@ if (wallVideo) {
     wallpaper.classList.add('ready');
   }
 }
-
-/* botão de pausar/retomar o wallpaper (no rail, abaixo dos separadores) */
-let wallPlaying = true;
- $('#wallToggle').addEventListener('click', () => {
-  wallPlaying = !wallPlaying;
-  if (wallPlaying) {
-    wallVideo.play().catch(()=>{});
-    $('#wallToggle .rail-btn').innerHTML = '<i data-lucide="pause"></i>';
-    $('#wallToggle').setAttribute('data-tip', 'Pausar papel de parede');
-  } else {
-    wallVideo.pause();
-    $('#wallToggle .rail-btn').innerHTML = '<i data-lucide="play"></i>';
-    $('#wallToggle').setAttribute('data-tip', 'Retomar papel de parede');
-  }
-  refreshIcons();
-});
 
 /* ═══════════════════════ NAVEGAÇÃO ═══════════════════════ */
 function showView(id){
