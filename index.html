@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refúgio — Botão de Pânico para Discord</title>
+<title>Conexão ou Isolamento?</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a5a0f2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 2l7 4v6c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z'/%3E%3Cpath d='M12 14.6s-3.4-2-3.4-4.4a1.95 1.95 0 0 1 3.4-1.3 1.95 1.95 0 0 1 3.4 1.3c0 2.4-3.4 4.4-3.4 4.4z' fill='%23a5a0f2' stroke='none'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,15 +12,15 @@
 <style>
 /* ============ BASE ============ */
 :root{
-  --bg0:#12131a;      /* rail */
-  --bg1:#171821;      /* página */
-  --bg2:#1d1f2b;      /* superfície */
-  --bg3:#242738;      /* elevada */
-  --line:rgba(168,173,220,.12);
-  --line-soft:rgba(168,173,220,.07);
+  --bg0:rgba(15,16,23,.82);   /* rail — translúcido sobre o vídeo */
+  --bg1:rgba(18,19,27,.62);   /* campos de texto — translúcido */
+  --bg2:rgba(25,27,39,.72);   /* superfícies — translúcidas */
+  --bg3:rgba(35,38,56,.78);   /* superfícies elevadas */
+  --line:rgba(168,173,220,.14);
+  --line-soft:rgba(168,173,220,.08);
   --tx1:#e9e9f3;
-  --tx2:#a9abc2;
-  --tx3:#71748f;
+  --tx2:#b4b6cb;
+  --tx3:#82859e;
   --lav:#a5a0f2;      /* lavanda — primária */
   --lav-soft:#c9c6fa;
   --ink:#17152b;      /* texto sobre lavanda */
@@ -32,21 +32,42 @@
   --font-body:'Atkinson Hyperlegible',sans-serif;
   --font-disp:'Sora',sans-serif;
   --font-mono:'JetBrains Mono',monospace;
+  --glass:backdrop-filter:blur(18px) saturate(1.15);-webkit-backdrop-filter:blur(18px) saturate(1.15);
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{
-  background:var(--bg1); color:var(--tx1);
+  background:#14151d; /* fallback sólido — aparece se o vídeo não carregar */
+  color:var(--tx1);
   font-family:var(--font-body); font-size:16px; line-height:1.6;
   -webkit-font-smoothing:antialiased; overflow-x:hidden;
 }
 ::selection{background:var(--lav); color:var(--ink)}
 ::-webkit-scrollbar{width:10px;height:10px}
-::-webkit-scrollbar-thumb{background:#2c2f42;border-radius:8px;border:2px solid var(--bg1)}
+::-webkit-scrollbar-thumb{background:rgba(60,64,92,.7);border-radius:8px;border:2px solid transparent}
 ::-webkit-scrollbar-track{background:transparent}
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
 a{color:var(--lav-soft)}
 :focus-visible{outline:2px solid var(--lav);outline-offset:2px;border-radius:6px}
+
+/* ============ WALLPAPER EM VÍDEO ============ */
+.wallpaper{
+  position:fixed;inset:0;z-index:0;overflow:hidden;
+  opacity:0;transition:opacity 1.2s ease;
+}
+.wallpaper.ready{opacity:1}
+.wallpaper video{
+  width:100%;height:100%;object-fit:cover;display:block;
+}
+/* camada escura sobre o vídeo — garante contraste do texto em toda a altura */
+.wall-tint{
+  position:absolute;inset:0;
+  background:linear-gradient(180deg,
+    rgba(15,16,24,.80) 0%,
+    rgba(15,16,24,.60) 45%,
+    rgba(15,16,24,.82) 100%);
+}
+.app{position:relative;z-index:1}
 
 /* ============ LAYOUT GERAL ============ */
 .app{display:flex;min-height:100vh}
@@ -60,8 +81,12 @@ main{flex:1;min-width:0}
   width:76px;flex-shrink:0;background:var(--bg0);
   display:flex;flex-direction:column;align-items:center;gap:8px;
   padding:14px 0 16px;position:sticky;top:0;height:100vh;z-index:50;
+  var(--glass);
+  backdrop-filter:blur(18px) saturate(1.15);-webkit-backdrop-filter:blur(18px) saturate(1.15);
+  border-right:1px solid var(--line-soft);
 }
 .rail-group{display:flex;flex-direction:column;gap:10px;align-items:center}
+.rail-bottom{display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:auto}
 .rail-sep{width:34px;height:2px;background:var(--line);border-radius:2px;margin:6px 0}
 .rail-item{position:relative;display:block;border-radius:50%}
 .rail-item .pill{
@@ -117,6 +142,7 @@ h2{font-family:var(--font-disp);font-weight:600;font-size:clamp(28px,3.6vw,42px)
 .crisis-line{
   margin-top:44px;padding:14px 18px;border:1px solid var(--line);border-left:3px solid var(--sage);
   border-radius:var(--r-md);font-size:14.5px;color:var(--tx2);max-width:560px;
+  background:rgba(20,21,30,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
 }
 .crisis-line b{color:var(--sage)}
 .btn{
@@ -127,19 +153,22 @@ h2{font-family:var(--font-disp);font-weight:600;font-size:clamp(28px,3.6vw,42px)
 .btn:active{transform:scale(.97)}
 .btn-primary{background:var(--lav);color:var(--ink)}
 .btn-primary:hover{background:var(--lav-soft);transform:translateY(-1px)}
-.btn-ghost{border:1px solid var(--line);color:var(--tx1)}
+.btn-ghost{border:1px solid var(--line);color:var(--tx1);background:rgba(20,21,30,.45);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .btn-ghost:hover{border-color:var(--lav);color:var(--lav-soft)}
 .btn-sage{background:var(--sage);color:#12241c}
 .btn-sage:hover{background:#a4e0c4}
 
 /* console do bot (hero) */
-.console{background:var(--bg0);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.console{background:var(--bg0);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;
+  backdrop-filter:blur(18px) saturate(1.15);-webkit-backdrop-filter:blur(18px) saturate(1.15);
+  box-shadow:0 18px 48px rgba(0,0,0,.35);
+}
 .console-bar{
   display:flex;align-items:center;gap:8px;padding:12px 16px;
-  border-bottom:1px solid var(--line-soft);background:var(--bg2);
+  border-bottom:1px solid var(--line-soft);background:var(--bg3);
 }
-.console-bar .dot{width:10px;height:10px;border-radius:50%;background:#33364c}
-.console-bar .dot:first-child{background:#4c4a6e}
+.console-bar .dot{width:10px;height:10px;border-radius:50%;background:rgba(80,84,120,.8)}
+.console-bar .dot:first-child{background:#5b5890}
 .console-title{font-family:var(--font-mono);font-size:12px;color:var(--tx3);margin-left:8px}
 .live{margin-left:auto;display:flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:11px;color:var(--sage)}
 .live i{width:7px;height:7px;border-radius:50%;background:var(--sage);animation:blink 1.8s infinite}
@@ -154,7 +183,10 @@ h2{font-family:var(--font-disp);font-weight:600;font-size:clamp(28px,3.6vw,42px)
 
 /* ============ CHAT SIMULADO ============ */
 .panic-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:26px;align-items:start}
-.chat-card{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;display:flex;flex-direction:column}
+.chat-card{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;display:flex;flex-direction:column;
+  backdrop-filter:blur(18px) saturate(1.15);-webkit-backdrop-filter:blur(18px) saturate(1.15);
+  box-shadow:0 18px 48px rgba(0,0,0,.3);
+}
 .chat-top{
   display:flex;align-items:center;gap:11px;padding:14px 18px;
   border-bottom:1px solid var(--line-soft);background:var(--bg3);
@@ -169,7 +201,7 @@ h2{font-family:var(--font-disp);font-weight:600;font-size:clamp(28px,3.6vw,42px)
 .chat-messages{height:430px;overflow-y:auto;padding:20px 18px 10px;display:flex;flex-direction:column;gap:16px}
 .chat-messages::-webkit-scrollbar{width:8px}
 .msg{display:flex;gap:13px;padding:3px 6px;border-radius:10px;position:relative;transition:background .2s}
-.msg:hover{background:rgba(255,255,255,.02)}
+.msg:hover{background:rgba(255,255,255,.03)}
 .msg .avatar{
   width:40px;height:40px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;
   font-weight:700;font-size:15px;color:#12131b;background:var(--av,#888);
@@ -189,7 +221,7 @@ h2{font-family:var(--font-disp);font-weight:600;font-size:clamp(28px,3.6vw,42px)
 .chip-bot{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--lav);border:1px solid rgba(165,160,242,.4);padding:1px 7px;border-radius:20px}
 .msg-text{color:var(--tx2);font-size:14.5px;word-wrap:break-word}
 .msg.is-bot .msg-text{color:var(--tx1)}
-.msg.risk{background:rgba(240,147,141,.05);box-shadow:inset 3px 0 0 var(--coral);padding-left:12px}
+.msg.risk{background:rgba(240,147,141,.07);box-shadow:inset 3px 0 0 var(--coral);padding-left:12px}
 .chat-toolbar{padding:10px 18px;border-top:1px solid var(--line-soft);display:flex}
 .btn-scenario{
   display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--amber);
@@ -210,7 +242,7 @@ h2{font-family:var(--font-disp);font-weight:600;font-size:clamp(28px,3.6vw,42px)
 .send-btn svg{width:19px;height:19px}
 .silence-banner{
   display:none;align-items:center;gap:11px;padding:13px 18px;
-  background:rgba(143,212,180,.08);border-top:1px solid var(--line-soft);
+  background:rgba(143,212,180,.1);border-top:1px solid var(--line-soft);
   color:var(--sage);font-size:13.5px;font-weight:700;
 }
 .silence-banner.show{display:flex}
@@ -226,32 +258,46 @@ h2{font-family:var(--font-disp);font-weight:600;font-size:clamp(28px,3.6vw,42px)
 .panic-zone{
   background:var(--bg2);border:1px solid var(--line);border-radius:var(--r-lg);
   padding:30px 24px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:16px;
+  backdrop-filter:blur(18px) saturate(1.15);-webkit-backdrop-filter:blur(18px) saturate(1.15);
+  box-shadow:0 18px 48px rgba(0,0,0,.3);
 }
 .panic-zone.pulse{animation:panicPulse 1.1s ease-in-out 3}
 @keyframes panicPulse{0%,100%{border-color:var(--line);transform:scale(1)}50%{border-color:var(--coral);transform:scale(1.015)}}
-.hold-wrap{position:relative;width:132px;height:132px;display:flex;align-items:center;justify-content:center}
-.hold-ring{position:absolute;inset:0;transform:rotate(-90deg)}
-.hold-ring circle{fill:none;stroke-width:5}
-.hold-ring .track{stroke:var(--bg3)}
-.hold-ring .fill{
-  stroke:var(--coral);stroke-linecap:round;
-  stroke-dasharray:402;stroke-dashoffset:402;
+.panic-btn{
+  position:relative;width:150px;height:150px;border-radius:50%;
+  background:var(--bg3);border:2px solid rgba(240,147,141,.5);color:var(--coral);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  transition:transform .15s,background .2s,border-color .2s;
 }
-.hold-btn{
-  width:104px;height:104px;border-radius:50%;background:var(--bg3);
-  border:1px solid rgba(240,147,141,.45);color:var(--coral);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
-  transition:transform .12s,background .2s;user-select:none;-webkit-user-select:none;touch-action:none;
+.panic-btn svg{width:36px;height:36px}
+.panic-btn small{
+  font-size:11px;font-weight:700;letter-spacing:.12em;line-height:1.55;
+  font-family:var(--font-mono);text-align:center;
 }
-.hold-btn svg{width:30px;height:30px}
-.hold-btn small{font-size:10px;font-weight:700;letter-spacing:.1em;font-family:var(--font-mono)}
-.hold-btn:hover{background:#2b2a3d}
-.hold-btn.holding{transform:scale(1.07);background:#33262f}
-.hold-btn.done{animation:shake .35s ease}
-@keyframes shake{0%,100%{transform:scale(1.1)}25%{transform:scale(1.1) rotate(-3deg)}75%{transform:scale(1.1) rotate(3deg)}}
-.hold-hint{font-size:13.5px;color:var(--tx2);max-width:230px}
-.hold-hint b{color:var(--tx1)}
-.trust-card,.evidence-card{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px 22px}
+.panic-btn::after{
+  content:"";position:absolute;inset:-9px;border-radius:50%;
+  border:1px solid rgba(240,147,141,.4);
+  animation:panicRipple 2.4s ease-out infinite;pointer-events:none;
+}
+@keyframes panicRipple{
+  0%{transform:scale(.9);opacity:0}
+  45%{opacity:1}
+  100%{transform:scale(1.22);opacity:0}
+}
+.panic-btn:hover{background:#2f2a40;border-color:var(--coral);transform:scale(1.04)}
+.panic-btn:active{transform:scale(.94)}
+.panic-btn.fired{animation:panicFlash .5s ease}
+@keyframes panicFlash{
+  0%{box-shadow:0 0 0 0 rgba(240,147,141,.55)}
+  100%{box-shadow:0 0 0 28px rgba(240,147,141,0)}
+}
+.panic-hint{font-size:13.5px;color:var(--tx2);max-width:240px}
+.panic-hint b{color:var(--tx1)}
+.trust-card,.evidence-card{
+  background:var(--bg2);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px 22px;
+  backdrop-filter:blur(18px) saturate(1.15);-webkit-backdrop-filter:blur(18px) saturate(1.15);
+  box-shadow:0 18px 48px rgba(0,0,0,.3);
+}
 .card-title{
   display:flex;align-items:center;gap:9px;font-family:var(--font-disp);font-size:14px;
   font-weight:600;margin-bottom:14px;color:var(--tx1);
@@ -291,9 +337,10 @@ h2{font-family:var(--font-disp);font-weight:600;font-size:clamp(28px,3.6vw,42px)
 
 /* ============ MODO ABRIGO (overlay) ============ */
 .shelter{
-  position:fixed;inset:0;z-index:200;background:rgba(13,14,20,.97);
+  position:fixed;inset:0;z-index:200;background:rgba(13,14,20,.96);
   display:none;flex-direction:column;align-items:center;justify-content:center;
   padding:32px;text-align:center;overflow-y:auto;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
 }
 .shelter.open{display:flex;animation:shelterIn .6s ease both}
 @keyframes shelterIn{from{opacity:0}to{opacity:1}}
@@ -309,7 +356,7 @@ h2{font-family:var(--font-disp);font-weight:600;font-size:clamp(28px,3.6vw,42px)
 .shelter .shelter-sub{color:var(--tx2);max-width:480px;margin-bottom:32px;font-size:15.5px}
 .shelter-log{display:flex;flex-direction:column;gap:10px;width:100%;max-width:440px;margin-bottom:34px}
 .sl-item{
-  display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--line);
+  display:flex;align-items:center;gap:12px;background:rgba(25,27,39,.85);border:1px solid var(--line);
   border-radius:12px;padding:12px 16px;text-align:left;font-size:13.5px;color:var(--tx2);
   animation:clIn .4s ease both;
 }
@@ -318,17 +365,22 @@ h2{font-family:var(--font-disp);font-weight:600;font-size:clamp(28px,3.6vw,42px)
 .shelter-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
 
 /* ============ QUIZ ============ */
-.quiz-shell{max-width:660px;margin:0 auto}
+.quiz-shell{
+  max-width:660px;margin:0 auto;
+  background:var(--bg2);border:1px solid var(--line);border-radius:var(--r-lg);padding:34px;
+  backdrop-filter:blur(18px) saturate(1.15);-webkit-backdrop-filter:blur(18px) saturate(1.15);
+  box-shadow:0 18px 48px rgba(0,0,0,.3);
+}
 .quiz-segs{display:flex;gap:6px;margin-bottom:36px}
-.quiz-segs span{flex:1;height:4px;border-radius:4px;background:var(--bg3);transition:background .3s}
+.quiz-segs span{flex:1;height:4px;border-radius:4px;background:rgba(60,64,92,.6);transition:background .3s}
 .quiz-segs span.done{background:var(--lav)}
-.quiz-segs span.cur{background:var(--bg3);box-shadow:inset 0 0 0 1px var(--lav)}
+.quiz-segs span.cur{background:rgba(60,64,92,.6);box-shadow:inset 0 0 0 1px var(--lav)}
 .quiz-qnum{font-family:var(--font-mono);font-size:12.5px;color:var(--tx3);letter-spacing:.2em;margin-bottom:14px}
 .quiz-q{font-family:var(--font-disp);font-size:clamp(21px,2.6vw,27px);font-weight:600;line-height:1.3;margin-bottom:28px;min-height:74px}
 .quiz-opts{display:flex;flex-direction:column;gap:11px}
 .quiz-opt{
   display:flex;align-items:center;gap:14px;text-align:left;padding:15px 18px;
-  border:1px solid var(--line);border-radius:14px;background:var(--bg2);
+  border:1px solid var(--line);border-radius:14px;background:var(--bg1);
   font-size:15px;color:var(--tx2);transition:border-color .18s,background .18s,color .18s,transform .18s;
 }
 .quiz-opt:hover{border-color:var(--lav);color:var(--tx1);transform:translateX(3px)}
@@ -336,7 +388,7 @@ h2{font-family:var(--font-disp);font-weight:600;font-size:clamp(28px,3.6vw,42px)
   width:19px;height:19px;border-radius:50%;border:2px solid var(--tx3);flex-shrink:0;
   transition:border-color .18s,box-shadow .18s;position:relative;
 }
-.quiz-opt.sel{border-color:var(--lav);background:rgba(165,160,242,.07);color:var(--tx1)}
+.quiz-opt.sel{border-color:var(--lav);background:rgba(165,160,242,.1);color:var(--tx1)}
 .quiz-opt.sel .radio{border-color:var(--lav);box-shadow:inset 0 0 0 4px var(--lav)}
 .quiz-nav{display:flex;justify-content:space-between;margin-top:32px}
 .btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
@@ -347,7 +399,7 @@ h2{font-family:var(--font-disp);font-weight:600;font-size:clamp(28px,3.6vw,42px)
 .qr-ring-wrap{position:relative;width:150px;height:150px;flex-shrink:0}
 .qr-ring{transform:rotate(-90deg)}
 .qr-ring circle{fill:none;stroke-width:8;stroke-linecap:round}
-.qr-ring .track{stroke:var(--bg3)}
+.qr-ring .track{stroke:rgba(60,64,92,.6)}
 .qr-ring .fill{stroke:currentColor;stroke-dasharray:377;stroke-dashoffset:377;transition:stroke-dashoffset 1.3s cubic-bezier(.25,.7,.3,1)}
 .qr-num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--font-disp)}
 .qr-num b{font-size:32px;font-weight:700;color:currentColor}
@@ -376,7 +428,7 @@ h2{font-family:var(--font-disp);font-weight:600;font-size:clamp(28px,3.6vw,42px)
 .arch-node:last-child{padding-bottom:0}
 .arch-node::before{
   content:attr(data-n);position:absolute;left:-34px;top:0;width:24px;height:24px;border-radius:50%;
-  background:var(--bg1);border:2px solid var(--lav);color:var(--lav);
+  background:#14151d;border:2px solid var(--lav);color:var(--lav);
   font-family:var(--font-mono);font-size:11px;display:flex;align-items:center;justify-content:center;
 }
 .arch-node.accent::before{border-color:var(--sage);color:var(--sage)}
@@ -386,12 +438,13 @@ h2{font-family:var(--font-disp);font-weight:600;font-size:clamp(28px,3.6vw,42px)
 .chips{display:flex;gap:7px;flex-wrap:wrap}
 .chip{
   font-family:var(--font-mono);font-size:11px;color:var(--tx2);
-  background:var(--bg2);border:1px solid var(--line);padding:3px 10px;border-radius:7px;
+  background:rgba(25,27,39,.75);border:1px solid var(--line);padding:3px 10px;border-radius:7px;
 }
 .arch-note{
   margin-top:40px;display:flex;gap:14px;padding:18px 20px;max-width:760px;
   border:1px solid var(--line);border-left:3px solid var(--sage);border-radius:var(--r-md);
   color:var(--tx2);font-size:14px;
+  background:rgba(20,21,30,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
 }
 .arch-note svg{width:18px;height:18px;color:var(--sage);flex-shrink:0;margin-top:2px}
 
@@ -414,6 +467,8 @@ footer{
   border-top:1px solid var(--line);padding:34px 48px;
   max-width:1120px;margin:0 auto;color:var(--tx3);font-size:13px;
   display:flex;gap:26px;align-items:center;flex-wrap:wrap;
+  background:rgba(18,19,27,.6);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border-radius:var(--r-lg) var(--r-lg) 0 0;
 }
 footer .foot-brand{display:flex;align-items:center;gap:9px;color:var(--tx2);font-weight:700;font-family:var(--font-disp);font-size:14px}
 footer .foot-brand svg{width:17px;height:17px;color:var(--lav)}
@@ -423,9 +478,10 @@ footer .foot-cvv:hover{color:var(--sage)}
 /* ============ TOASTS ============ */
 .toast-box{position:fixed;bottom:24px;right:24px;z-index:300;display:flex;flex-direction:column;gap:10px;max-width:min(380px,calc(100vw - 40px))}
 .toast{
-  display:flex;align-items:flex-start;gap:11px;background:var(--bg3);border:1px solid var(--line);
+  display:flex;align-items:flex-start;gap:11px;background:rgba(35,38,56,.9);border:1px solid var(--line);
   border-radius:13px;padding:13px 16px;font-size:13.5px;color:var(--tx1);
   animation:toastIn .35s cubic-bezier(.2,.9,.3,1.2) both;box-shadow:0 12px 34px rgba(0,0,0,.45);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
 }
 .toast.out{animation:toastOut .3s ease both}
 @keyframes toastIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
@@ -437,8 +493,9 @@ footer .foot-cvv:hover{color:var(--sage)}
 .modal{position:fixed;inset:0;z-index:250;background:rgba(10,11,16,.8);display:none;align-items:center;justify-content:center;padding:28px}
 .modal.open{display:flex;animation:shelterIn .3s ease both}
 .modal-card{
-  background:var(--bg2);border:1px solid var(--line);border-radius:var(--r-lg);
+  background:rgba(25,27,39,.92);border:1px solid var(--line);border-radius:var(--r-lg);
   max-width:600px;width:100%;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
 }
 .modal-head{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line-soft)}
 .modal-head .fname{font-family:var(--font-mono);font-size:12.5px;color:var(--tx1)}
@@ -458,6 +515,7 @@ footer .foot-cvv:hover{color:var(--sage)}
   .stack-row{grid-template-columns:1fr;gap:10px;padding:18px 0}
   .view{padding:44px 26px 80px}
   footer{padding:28px 26px}
+  .quiz-shell{padding:24px 20px}
 }
 @media (max-width:640px){
   .app{flex-direction:column}
@@ -466,12 +524,14 @@ footer .foot-cvv:hover{color:var(--sage)}
     padding:10px 14px;overflow-x:auto;justify-content:flex-start;
   }
   .rail-group,.rail-bottom{flex-direction:row}
+  .rail-bottom{margin-top:0;margin-left:auto}
   .rail-sep{width:2px;height:34px;margin:0 6px;align-self:center}
   .rail-item .pill{left:50%;top:auto;bottom:-6px;transform:translateX(-50%);width:0;height:4px;border-radius:4px}
   .rail-item.active .pill{width:26px;height:4px}
   .rail-item::after{display:none}
   .chat-messages{height:340px}
   .qr-top{gap:22px}
+  .quiz-shell{padding:20px 16px}
 }
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.001s!important;transition-duration:.001s!important}
@@ -479,6 +539,12 @@ footer .foot-cvv:hover{color:var(--sage)}
 </style>
 </head>
 <body>
+
+<!-- ══════════ WALLPAPER ANIMADO (1.mp4) ══════════ -->
+<div class="wallpaper" id="wallpaper" aria-hidden="true">
+  <video id="wallVideo" src="1.mp4" autoplay muted loop playsinline preload="auto"></video>
+  <div class="wall-tint"></div>
+</div>
 
 <div class="app">
   <!-- ══════════ RAIL DE NAVEGAÇÃO (estilo Discord) ══════════ -->
@@ -492,6 +558,7 @@ footer .foot-cvv:hover{color:var(--sage)}
     </div>
     <div class="rail-sep"></div>
     <div class="rail-bottom">
+      <button class="rail-item" id="wallToggle" data-tip="Pausar papel de parede"><span class="pill"></span><span class="rail-btn"><i data-lucide="pause"></i></span></button>
       <a class="rail-item crisis" href="tel:188" data-tip="CVV 188 — ligar agora (24h)"><span class="pill"></span><span class="rail-btn"><i data-lucide="life-buoy"></i></span></a>
     </div>
   </nav>
@@ -502,8 +569,8 @@ footer .foot-cvv:hover{color:var(--sage)}
       <div class="hero">
         <div>
           <div class="eyebrow">Protótipo · Segurança digital em comunidades</div>
-          <h1>Um botão de <em>pânico</em> dentro do próprio Discord.</h1>
-          <p>O <strong>Refúgio</strong> é um bot de proteção para servidores: quando alguém se sente ameaçado(a) ou pressionado(a), um toque longo captura as provas, silencia o canal e abre um espaço de calma — sem depender de um moderador online.</p>
+          <h1>Conexão ou <em>Isolamento?</em></h1>
+          <p>É a pergunta que o <strong>Refúgio</strong> responde: um bot de proteção para o Discord que mantém a conexão saudável — quando alguém se sente ameaçado(a) ou pressionado(a), um toque captura as provas, silencia o canal e abre um espaço de calma.</p>
           <div class="hero-cta">
             <button class="btn btn-primary" data-goto="panico"><i data-lucide="siren"></i> Experimentar o botão de pânico</button>
             <button class="btn btn-ghost" data-goto="quiz"><i data-lucide="heart-pulse"></i> Fazer o autocheck</button>
@@ -531,7 +598,7 @@ footer .foot-cvv:hover{color:var(--sage)}
       <header class="view-head">
         <div class="eyebrow">01 · Proteção imediata</div>
         <h2>Botão de Pânico</h2>
-        <p class="lead">Este é um servidor simulado. Reproduza um cenário hostil, converse, e quando se sentir pressionado(a), <strong style="color:var(--tx1)">segure o botão por 1,5 s</strong>: o Refúgio captura a conversa, guarda as evidências e abre o Modo Abrigo.</p>
+        <p class="lead">Este é um servidor simulado. Reproduza um cenário hostil, converse, e quando se sentir pressionado(a), <strong style="color:var(--tx1)">toque no botão Ativar Proteção</strong>: o Refúgio captura a conversa, guarda as evidências e abre o Modo Abrigo na hora.</p>
       </header>
 
       <div class="panic-grid">
@@ -560,16 +627,11 @@ footer .foot-cvv:hover{color:var(--sage)}
         <!-- coluna de proteção -->
         <aside class="panic-side">
           <div class="panic-zone" id="panicZone">
-            <div class="hold-wrap">
-              <svg class="hold-ring" viewBox="0 0 132 132">
-                <circle class="track" cx="66" cy="66" r="64"/>
-                <circle class="fill" id="holdFill" cx="66" cy="66" r="64"/>
-              </svg>
-              <button class="hold-btn" id="holdBtn" aria-label="Segure para ativar o Modo Abrigo">
-                <i data-lucide="siren"></i><small>SEGURE</small>
-              </button>
-            </div>
-            <p class="hold-hint">Segure por <b>1,5 segundo</b> para capturar as provas, silenciar tudo e entrar no <b>Modo Abrigo</b>.</p>
+            <button class="panic-btn" id="panicBtn" aria-label="Ativar proteção: capturar evidências e abrir o Modo Abrigo">
+              <i data-lucide="siren"></i>
+              <small>ATIVAR<br>PROTEÇÃO</small>
+            </button>
+            <p class="panic-hint">Um <b>toque</b> é suficiente: o Refúgio captura as provas, silencia o canal e abre o <b>Modo Abrigo</b> na hora.</p>
           </div>
 
           <div class="trust-card">
@@ -655,9 +717,9 @@ footer .foot-cvv:hover{color:var(--sage)}
 
       <div class="about-cols">
         <div>
-          <h3>Por que o Refúgio existe</h3>
-          <p>Denunciar assédio no Discord hoje depende de sorte: um moderador online, prints manuais, coragem num momento de pânico. O Refúgio inverte essa lógica — a proteção mora dentro da própria conversa, a um toque longo de distância, e as provas se preservam sozinhas.</p>
-          <p>O nome é intencional: mais do que uma ferramenta de denúncia, o projeto quer oferecer um <strong style="color:var(--tx1)">lugar para respirar</strong> enquanto a tecnologia cuida do resto.</p>
+          <h3>Conexão ou isolamento?</h3>
+          <p>Denunciar assédio no Discord hoje depende de sorte: um moderador online, prints manuais, coragem num momento de pânico. Quando a proteção falha, a conexão que deveria ser saudável vira isolamento — e é exatamente aí que o Refúgio age.</p>
+          <p>O nome é intencional: mais do que uma ferramenta de denúncia, o projeto quer oferecer um <strong style="color:var(--tx1)">lugar para respirar</strong> enquanto a tecnologia cuida do resto — para que ficar conectado(a) nunca signifique ficar desprotegido(a).</p>
         </div>
         <div>
           <h3>Compromissos do projeto</h3>
@@ -771,6 +833,43 @@ function downloadTxt(name, content){
   a.click(); URL.revokeObjectURL(url);
 }
 
+/* ═══════════════════════ WALLPAPER EM VÍDEO ═══════════════════════ */
+const wallpaper = $('#wallpaper');
+const wallVideo = $('#wallVideo');
+
+if (wallVideo) {
+  /* fade-in suave assim que o vídeo estiver pronto para tocar */
+  const showWall = () => wallpaper.classList.add('ready');
+  wallVideo.addEventListener('canplay', () => { showWall(); wallVideo.play().catch(()=>{}); });
+  /* fallback: se o evento canplay não disparar, mostra quando já tiver dados */
+  wallVideo.addEventListener('loadeddata', showWall);
+  /* se o 1.mp4 não existir ou falhar, esconde a camada — a página volta ao fundo escuro sólido */
+  wallVideo.addEventListener('error', () => { wallpaper.style.display = 'none'; });
+  /* segurança extra: se em 4 s nada carregou, esconde também */
+  setTimeout(() => { if (wallVideo.readyState < 2) wallpaper.style.display = 'none'; }, 4000);
+  /* acessibilidade: quem prefere menos movimento não vê o vídeo animado */
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    wallVideo.pause();
+    wallpaper.classList.add('ready');
+  }
+}
+
+/* botão de pausar/retomar o wallpaper (no rail, abaixo dos separadores) */
+let wallPlaying = true;
+ $('#wallToggle').addEventListener('click', () => {
+  wallPlaying = !wallPlaying;
+  if (wallPlaying) {
+    wallVideo.play().catch(()=>{});
+    $('#wallToggle .rail-btn').innerHTML = '<i data-lucide="pause"></i>';
+    $('#wallToggle').setAttribute('data-tip', 'Pausar papel de parede');
+  } else {
+    wallVideo.pause();
+    $('#wallToggle .rail-btn').innerHTML = '<i data-lucide="play"></i>';
+    $('#wallToggle').setAttribute('data-tip', 'Retomar papel de parede');
+  }
+  refreshIcons();
+});
+
 /* ═══════════════════════ NAVEGAÇÃO ═══════════════════════ */
 function showView(id){
   $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-'+id));
@@ -860,7 +959,7 @@ let scIdx = 0, botWarnedThisBatch = false;
       botWarnedThisBatch = true;
       setTimeout(() => {
         addMsg({author:'Refúgio Bot', bot:true,
-          text:'Vi o que está acontecendo aqui. Você não precisa dar satisfação a ninguém. Segure o botão de pânico ao lado quando quiser — eu guardo as provas e silencio tudo por você.'});
+          text:'Vi o que está acontecendo aqui. Você não precisa dar satisfação a ninguém. Toque no botão de pânico ao lado quando quiser — eu guardo as provas e silencio tudo por você.'});
         $('#panicZone').classList.add('pulse');
         setTimeout(()=>$('#panicZone').classList.remove('pulse'), 3600);
         toast('Mensagens hostis sinalizadas pelo Refúgio.', 'warn', 'alert-triangle');
@@ -882,7 +981,7 @@ let scIdx = 0, botWarnedThisBatch = false;
   const lower = text.toLowerCase();
   if (DISTRESS_WORDS.some(w => lower.includes(w))) {
     setTimeout(() => addMsg({author:'Refúgio Bot', bot:true,
-      text:'Obrigado por escrever isso. Está tudo bem não estar bem agora. Se essa conversa estiver pesando, o Modo Abrigo está a um toque longo de distância — e eu preservo as provas por você.'}), 800);
+      text:'Obrigado por escrever isso. Está tudo bem não estar bem agora. Se essa conversa estiver pesando, o Modo Abrigo está a um toque de distância — e eu preservo as provas por você.'}), 800);
     $('#panicZone').classList.add('pulse');
     setTimeout(()=>$('#panicZone').classList.remove('pulse'), 3600);
   }
@@ -904,52 +1003,19 @@ trustInput.value = localStorage.getItem('refugio_trust') || '';
   toast('Canal reativado. Você volta a receber mensagens.', 'ok', 'bell-off');
 });
 
-/* ═══════════════════════ BOTÃO DE PÂNICO (toque longo) ═══════════════════════ */
-const holdBtn  = $('#holdBtn');
-const holdFill = $('#holdFill');
-const CIRC = 402;
-let holdRAF = null, holdStart = 0, holding = false;
-const HOLD_MS = 1500;
-
-function holdFrame(ts){
-  if (!holding) return;
-  const p = Math.min((ts - holdStart) / HOLD_MS, 1);
-  holdFill.style.strokeDashoffset = CIRC * (1 - p);
-  if (p >= 1) { holding = false; activateShelter(); return; }
-  holdRAF = requestAnimationFrame(holdFrame);
-}
-function startHold(){
-  if (holding || $('#shelter').classList.contains('open')) return;
-  holding = true; holdStart = performance.now();
-  holdBtn.classList.add('holding');
-  holdRAF = requestAnimationFrame(holdFrame);
-}
-function cancelHold(){
-  if (!holding) return;
-  holding = false; cancelAnimationFrame(holdRAF);
-  holdBtn.classList.remove('holding');
-  holdFill.style.strokeDashoffset = CIRC;
-}
-holdBtn.addEventListener('pointerdown', e => { holdBtn.setPointerCapture(e.pointerId); startHold(); });
-holdBtn.addEventListener('pointerup', cancelHold);
-holdBtn.addEventListener('pointercancel', cancelHold);
-holdBtn.addEventListener('keydown', e => {
-  if ((e.key === 'Enter' || e.key === ' ') && e.repeat) {
-    if (!holding) startHold();
-    else { const p = Math.min((performance.now() - holdStart + 16) / HOLD_MS, 1); holdFill.style.strokeDashoffset = CIRC * (1 - p); if (p >= 1) { holding = false; activateShelter(); } }
-  } else if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) startHold();
-});
-holdBtn.addEventListener('keyup', e => { if (e.key === 'Enter' || e.key === ' ') { if (holding && performance.now() - holdStart < HOLD_MS) cancelHold(); } });
+/* ═══════════════════════ BOTÃO DE PÂNICO (toque único) ═══════════════════════ */
+const panicBtn = $('#panicBtn');
+panicBtn.addEventListener('click', activateShelter);
 
 /* ═══════════════════════ MODO ABRIGO + EVIDÊNCIAS ═══════════════════════ */
 const evidenceStore = [];
 let breathTimer = null, slTimers = [];
 
 function activateShelter(){
-  holdBtn.classList.add('done');
-  holdBtn.classList.remove('holding');
-  setTimeout(()=>holdBtn.classList.remove('done'), 400);
-  holdFill.style.strokeDashoffset = CIRC;
+  if ($('#shelter').classList.contains('open')) return; /* evita ativação dupla */
+
+  panicBtn.classList.add('fired');
+  setTimeout(()=>panicBtn.classList.remove('fired'), 520);
 
   const stamp = new Date();
   const fname = 'captura_refugio_' + stamp.toISOString().slice(0,19).replace(/[-:T]/g,'') + '.png';
